@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "0 11 * * 1"   # segunda-feira 08:00 (horário de Brasília = 11:00 UTC)
   workflow_dispatch:        # botão "Run workflow" para rodar na hora
+    inputs:
+      fontes:
+        description: "Só estas fontes (ex.: detran,vip). Vazio = todas"
+        default: ""
+      publicar:
+        description: "Publicar o site ao final"
+        type: boolean
+        default: true
 
 permissions:
   contents: write   # grava ultima_coleta.txt (mantém os agendamentos ativos no GitHub)
@@ -38,10 +46,27 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
+      - name: Completar certificados incompletos (Detran-MG)
+        continue-on-error: true
+        run: |
+          set -e
+          cp "$(python -m certifi)" /tmp/bundle.pem
+          for host in leilao.detran.mg.gov.br; do
+            echo | openssl s_client -connect "$host:443" -servername "$host" 2>/dev/null | openssl x509 > /tmp/srv.pem
+            url=$(openssl x509 -in /tmp/srv.pem -noout -ext authorityInfoAccess | grep -oP 'CA Issuers - URI:\K\S+' | head -1)
+            echo "$host -> $url"
+            curl -fsSL "$url" -o /tmp/inter.bin
+            openssl x509 -inform der -in /tmp/inter.bin >> /tmp/bundle.pem 2>/dev/null \
+              || openssl x509 -in /tmp/inter.bin >> /tmp/bundle.pem 2>/dev/null \
+              || openssl pkcs7 -inform der -in /tmp/inter.bin -print_certs >> /tmp/bundle.pem
+          done
+          echo "REQUESTS_CA_BUNDLE=/tmp/bundle.pem" >> "$GITHUB_ENV"
+
       - name: Coletar todas as fontes
-        run: python -m veiculos_br --banco veiculos.db coletar
+        run: python -m veiculos_br --banco veiculos.db coletar ${{ inputs.fontes && format('--fontes {0}', inputs.fontes) || '' }}
 
       - name: Gerar o site
+        if: inputs.publicar != false
         env:
           EMAIL_USUARIO: ${{ secrets.EMAIL_USUARIO }}
           EMAIL_SENHA: ${{ secrets.EMAIL_SENHA }}
@@ -49,13 +74,16 @@ jobs:
         run: python -m veiculos_br --banco veiculos.db exportar --saida _site --repo "${{ github.repository }}" --avisar
 
       - uses: actions/upload-pages-artifact@v3
+        if: inputs.publicar != false
         with:
           path: _site
 
       - id: deploy
+        if: inputs.publicar != false
         uses: actions/deploy-pages@v4
 
       - name: Registrar a data da coleta
+        if: inputs.publicar != false
         run: |
           date -Iseconds > ultima_coleta.txt
           git config user.name "github-actions[bot]"
