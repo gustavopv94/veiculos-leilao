@@ -313,7 +313,17 @@ class Copart(Fonte):
 
     def _pagina_tudo(self, corpo: str, lotes: dict):
         base = dict(parse_qsl(corpo, keep_blank_values=True))
-        pagina, total = 0, 1
+        total = self._passada(base, lotes)
+        if total and len(lotes) < total * 0.98:
+            # a API às vezes devolve páginas vazias no meio; busca o restante pelo outro lado da ordenação
+            invertida = dict(base, sort=base.get("sort", "").replace(" asc", " desc"))
+            log.info("[Copart] faltaram %d lotes; segunda passada com ordem invertida", total - len(lotes))
+            self._passada(invertida, lotes)
+        if total and len(lotes) < total * 0.98:
+            self.avisos.append(f"a API devolveu só {len(lotes)} de {total} lotes")
+
+    def _passada(self, base: dict, lotes: dict) -> int:
+        pagina, total, vazias = 0, 1, 0
         while pagina * COPART_TAM < total and pagina < 200:
             q = dict(base, draw=str(pagina + 2), start=str(pagina * COPART_TAM), length=str(COPART_TAM),
                      page=str(pagina), size=str(COPART_TAM))
@@ -321,10 +331,16 @@ class Copart(Fonte):
             if status != 200:
                 raise FonteErro(f"HTTP {status} na busca do Copart (página {pagina})")
             res = (json.loads(texto).get("data") or {}).get("results") or {}
-            total = int(res.get("totalElements") or 0)
+            total = int(res.get("totalElements") or 0) or total
             conteudo = res.get("content") or []
             if not conteudo:
+                vazias += 1
+                if vazias <= 3:
+                    log.info("[Copart] página %d veio vazia; tentando de novo", pagina + 1)
+                    self._pg.wait_for_timeout(3000 * vazias)
+                    continue
                 break
+            vazias = 0
             novos = 0
             for x in conteudo:
                 try:
@@ -336,9 +352,8 @@ class Copart(Fonte):
                     lotes[l.id_fonte] = l
                     novos += 1
             log.info("[Copart] página %d: +%d (total %d de %d)", pagina + 1, novos, len(lotes), total)
-            if not novos:
-                break
             pagina += 1
+        return total
 
 
 # ======================================================================================
