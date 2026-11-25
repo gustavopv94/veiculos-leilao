@@ -1,0 +1,47 @@
+{
+ "copart:1173076": {
+  "criado_em": "2026-11-25T17:09:40",
+  "lembrar": false,
+  "antecedencia_min": 60,
+  "nota": "",
+  "titulo": "RENAULT KWID 1.0 SCE 2018/2019",
+  "link": "https://www.copart.com.br/lot/1173076",
+  "foto": "https://brimages.copart.com.br/Repository/Fotos/9f65bb46-a492-48fa-9fa6-109e3776ea9e?imageType=full",
+  "fonte": "Copart",
+  "condicao": "Conservado",
+  "uf": "PE",
+  "cidade": "Vitória de Santo Antão",
+  "preco_ref": 11050.0,
+  "data_encerramento": "26/11/2026 11:30"
+ },
+ "copart:1188393": {
+  "criado_em": "2026-11-25T17:10:22",
+  "lembrar": false,
+  "antecedencia_min": 60,
+  "nota": "",
+  "titulo": "RENAULT KWID 1.0 SCE 2017/2018",
+  "link": "https://www.copart.com.br/lot/1188393",
+  "foto": "https://brimages.copart.com.br/Repository/Fotos/73a4f805-52ac-410b-ae8e-2226e784ad10?imageType=full",
+  "fonte": "Copart",
+  "condicao": "Conservado",
+  "uf": "PE",
+  "cidade": "Vitória de Santo Antão",
+  "preco_ref": 15050.0,
+  "data_encerramento": "26/11/2026 11:30"
+ },
+ "sodre:2830002": {
+  "criado_em": "2026-11-25T17:21:27",
+  "lembrar": false,
+  "antecedencia_min": 60,
+  "nota": "",
+  "titulo": "HYUNDAI - HB20 2017/2018",
+  "link": "https://leilao.sodresantoro.com.br/leilao/29247/lote/2830002/",
+  "foto": "https://photos.sodresantoro.com.br/veiculos/29247/2830002/1795548610_C1684373N10.JPG",
+  "fonte": "Sodré Santoro",
+  "condicao": "Pequena monta",
+  "uf": "",
+  "cidade": "",
+  "preco_ref": null,
+  "data_encerramento": "26/11/2026 12:47"
+ }
+}

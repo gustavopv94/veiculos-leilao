@@ -1,0 +1,14 @@
+# dados e credenciais locais — NUNCA publicar
+lembretes.json
+acesso.json
+link_publico.txt
+*.db
+*.db-shm
+*.db-wal
+*.log
+leiloes_mg.html
+leiloes_mg.json
+_site/
+__pycache__/
+*.pyc
+.claude/

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veículos em leilão — Brasil</title>
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+<header class="topo">
+  <div class="marca">
+    <h1>Veículos em leilão <span>Brasil</span></h1>
+    <div id="sub" class="sub"></div>
+  </div>
+  <div class="busca">
+    <input id="q" type="search" placeholder="Buscar: hilux 2020, gol g5, cg 160, onix lt…" autocomplete="off">
+  </div>
+  <button id="btnFav" class="btn" title="Mostrar só os favoritos">♥ Favoritos <span id="nFav"></span></button>
+  <button id="btnCfg" class="btn" title="Configurar lembretes (e-mail / Windows)">🔔</button>
+  <button id="abrirFiltros" class="btn so-mobile">Filtros</button>
+</header>
+
+<div class="layout">
+  <aside id="filtros" class="filtros">
+    <div class="f-topo">
+      <strong>Filtros</strong>
+      <button id="limpar" class="link">limpar tudo</button>
+      <button id="fecharFiltros" class="link so-mobile">fechar ✕</button>
+    </div>
+
+    <section>
+      <h3>Condição</h3>
+      <div id="f-condicao" class="chips"></div>
+    </section>
+
+    <section>
+      <h3>Preço (R$)</h3>
+      <div class="faixa">
+        <input id="preco_min" type="number" min="0" step="500" placeholder="mín.">
+        <span>–</span>
+        <input id="preco_max" type="number" min="0" step="500" placeholder="máx.">
+      </div>
+    </section>
+
+    <section>
+      <h3>Ano</h3>
+      <div class="faixa">
+        <input id="ano_min" type="number" min="1950" max="2030" placeholder="de">
+        <span>–</span>
+        <input id="ano_max" type="number" min="1950" max="2030" placeholder="até">
+      </div>
+    </section>
+
+    <section>
+      <h3>Quilometragem</h3>
+      <div class="faixa">
+        <input id="km_min" type="number" min="0" step="5000" placeholder="mín.">
+        <span>–</span>
+        <input id="km_max" type="number" min="0" step="5000" placeholder="máx.">
+      </div>
+      <label class="chk"><input id="sem_km" type="checkbox" checked> incluir lotes sem km informado</label>
+    </section>
+
+    <section>
+      <h3>Localização</h3>
+      <select id="f-uf" multiple size="6"></select>
+      <select id="f-cidade"></select>
+    </section>
+
+    <section>
+      <h3>Tipo</h3>
+      <div id="f-tipo" class="chips"></div>
+    </section>
+
+    <section>
+      <h3>Marca / modelo</h3>
+      <select id="f-marca"></select>
+      <input id="modelo" type="text" placeholder="modelo (ex.: onix, hb20)">
+    </section>
+
+    <section>
+      <h3>Origem</h3>
+      <div id="f-origem" class="chips"></div>
+    </section>
+
+    <section>
+      <h3>Combustível / câmbio</h3>
+      <div id="f-combustivel" class="chips"></div>
+      <div id="f-cambio" class="chips"></div>
+    </section>
+
+    <section>
+      <h3>Leilão</h3>
+      <select id="dias">
+        <option value="">qualquer data (inclui “em breve”)</option>
+        <option value="1">encerra em até 24 h</option>
+        <option value="3">em até 3 dias</option>
+        <option value="7">em até 7 dias</option>
+        <option value="15">em até 15 dias</option>
+        <option value="30">em até 30 dias</option>
+      </select>
+      <label class="chk"><input id="so_foto" type="checkbox"> só com foto</label>
+    </section>
+
+    <section>
+      <h3>Fonte</h3>
+      <div id="f-fonte" class="chips"></div>
+    </section>
+  </aside>
+
+  <main>
+    <div class="barra">
+      <div id="resumo" class="resumo"></div>
+      <div class="acoes">
+        <select id="ordem">
+          <option value="encerra">Encerra primeiro</option>
+          <option value="preco_asc">Menor preço</option>
+          <option value="preco_desc">Maior preço</option>
+          <option value="ano_desc">Mais novos</option>
+          <option value="ano_asc">Mais antigos</option>
+          <option value="km_asc">Menor km</option>
+          <option value="desconto">Maior desconto</option>
+          <option value="recentes">Recém-adicionados</option>
+        </select>
+        <a id="csv" class="btn" href="#" title="Baixar os lotes filtrados (abre no Excel)">CSV</a>
+      </div>
+    </div>
+    <div id="ativos" class="ativos"></div>
+    <div id="grade" class="grade"></div>
+    <div id="fim" class="fim"></div>
+  </main>
+</div>
+
+<dialog id="modal">
+  <div class="m-cab">
+    <h2 id="m-titulo"></h2>
+    <button id="m-fechar" class="link" aria-label="Fechar">✕</button>
+  </div>
+  <div id="m-corpo"></div>
+</dialog>
+
+<dialog id="cfg">
+  <div class="m-cab">
+    <h2>🔔 Lembretes de leilão</h2>
+    <button id="cfg-fechar" class="link" aria-label="Fechar">✕</button>
+  </div>
+  <div class="cfg-corpo">
+    <p>Marque o sino num veículo favorito e escolha a antecedência. O aviso chega por <b>e-mail</b> e pela
+      <b>notificação do Windows</b> quando o leilão estiver perto.</p>
+    <h3>E-mail</h3>
+    <p class="aviso">O envio usa uma conta sua como remetente, com uma <b>senha de app</b>: uma senha especial
+      gerada pelo provedor, que não é a senha normal. O <b>Gmail</b> é o mais simples:</p>
+    <ol class="aviso">
+      <li>Ative a verificação em duas etapas da conta Google (myaccount.google.com → Segurança).</li>
+      <li>Acesse <b>myaccount.google.com/apppasswords</b>, crie uma senha com o nome “Leilões” e copie os 16 caracteres.</li>
+    </ol>
+    <input id="cfg-user" type="email" placeholder="e-mail que envia (ex.: voce@gmail.com)" style="width:100%;margin-bottom:6px">
+    <input id="cfg-pass" type="password" placeholder="senha de app (16 caracteres)" style="width:100%;margin-bottom:6px">
+    <input id="cfg-para" type="email" placeholder="e-mail que recebe (vazio = o mesmo)" style="width:100%;margin-bottom:6px">
+    <label class="chk"><input id="cfg-win" type="checkbox" checked> também mostrar notificação do Windows</label>
+    <div class="m-acoes">
+      <button id="cfg-salvar" class="btn prim">Salvar</button>
+      <button id="cfg-teste" class="btn">Enviar teste</button>
+      <span id="cfg-msg" class="aviso"></span>
+    </div>
+    <p class="aviso">Os lembretes são conferidos a cada 5 min enquanto o site estiver aberto. Para receber mesmo com o
+      site fechado (PC ligado), rode uma vez: <code>python -m veiculos_br lembretes --agendar</code>.
+      O horário vem da última coleta: rode <code>python -m veiculos_br coletar</code> com frequência para pegar remarcações.</p>
+  </div>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
