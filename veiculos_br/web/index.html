@@ -16,6 +16,7 @@
     <input id="q" type="search" placeholder="Buscar: hilux 2020, gol g5, cg 160, onix lt…" autocomplete="off">
   </div>
   <button id="btnFav" class="btn" title="Mostrar só os favoritos">♥ Favoritos <span id="nFav"></span></button>
+  <button id="btnCalc" class="btn" title="Calculadora de arrematação: lance máximo pela FIPE">🧮</button>
   <button id="btnCfg" class="btn" title="Configurar lembretes (e-mail / Windows)">🔔</button>
   <button id="abrirFiltros" class="btn so-mobile">Filtros</button>
 </header>
@@ -139,6 +140,51 @@
   <div id="m-corpo"></div>
 </dialog>
 
+<dialog id="calc" class="calc">
+  <div class="m-cab">
+    <h2>🧮 Calculadora de arrematação</h2>
+    <button id="calc-fechar" class="link" aria-label="Fechar">✕</button>
+  </div>
+  <div class="calc-corpo">
+    <div id="calc-veiculo" class="aviso" hidden></div>
+    <section>
+      <h3>Tabela FIPE</h3>
+      <div class="calc-fipe">
+        <select id="fp-tipo"><option value="carros">Carro / utilitário</option><option value="motos">Moto</option><option value="caminhoes">Caminhão</option></select>
+        <select id="fp-marca"><option value="">marca…</option></select>
+        <input id="fp-filtro" type="search" placeholder="filtrar modelo (ex.: onix 1.0)">
+        <select id="fp-modelo"><option value="">modelo…</option></select>
+        <select id="fp-ano"><option value="">ano…</option></select>
+      </div>
+      <div id="fp-msg" class="aviso"></div>
+      <label class="calc-campo destaque">Valor FIPE (R$) <input id="c-fipe" type="text" inputmode="decimal" placeholder="busque acima ou digite"></label>
+    </section>
+    <section class="calc-grade">
+      <label class="calc-campo">% máxima da FIPE que aceito pagar (custo total) <input id="c-pct" type="text" inputmode="decimal"></label>
+      <label class="calc-campo">% do leiloeiro (comissão sobre o lance) <input id="c-com" type="text" inputmode="decimal"></label>
+      <label class="calc-campo">Lance (R$) — opcional, para conferir <input id="c-lance" type="text" inputmode="decimal"></label>
+    </section>
+    <section>
+      <h3>Taxas e custos fixos (R$)</h3>
+      <div class="calc-grade">
+        <label class="calc-campo">Taxa administrativa / pátio <input class="c-taxa" data-k="adm" type="text" inputmode="decimal"></label>
+        <label class="calc-campo">Documentação / despachante <input class="c-taxa" data-k="doc" type="text" inputmode="decimal"></label>
+        <label class="calc-campo">Transporte / guincho <input class="c-taxa" data-k="transp" type="text" inputmode="decimal"></label>
+        <label class="calc-campo">Reparos estimados <input class="c-taxa" data-k="reparo" type="text" inputmode="decimal"></label>
+        <label class="calc-campo">Outros (IPVA atrasado, multas…) <input class="c-taxa" data-k="outros" type="text" inputmode="decimal"></label>
+      </div>
+    </section>
+    <div id="calc-res" class="calc-res"></div>
+    <div class="m-acoes">
+      <button id="calc-nota" class="btn prim" hidden>Salvar lance máximo na anotação do veículo</button>
+      <button id="calc-limpar" class="btn">Limpar valores</button>
+      <span id="calc-msg" class="aviso"></span>
+    </div>
+    <p class="aviso">Lance máximo = (FIPE × % máxima − taxas fixas) ÷ (1 + % do leiloeiro). Confira no edital as taxas
+      de cada leilão (algumas cobram ICMS, taxa de remoção ou percentual extra). Valores FIPE: parallelum.com.br/fipe.</p>
+  </div>
+</dialog>
+
 <dialog id="cfg">
   <div class="m-cab">
     <h2>🔔 Lembretes de leilão</h2>
@@ -168,6 +214,8 @@
       O horário vem da última coleta: rode <code>python -m veiculos_br coletar</code> com frequência para pegar remarcações.</p>
   </div>
 </dialog>
+
+<div id="toast" class="toast" hidden></div>
 
 <script src="/static/app.js"></script>
 </body>

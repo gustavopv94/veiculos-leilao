@@ -189,6 +189,11 @@ def cmd_exportar(args) -> int:
 
 def cmd_lembretes_gh(args) -> int:
     from . import lembretes as L
+    if args.teste:
+        L.enviar_teste_estatico()
+        return 0
+    if not args.lista:
+        raise SystemExit("--lista é obrigatório")
     n = L.verificar_estatico(Path(args.lista), Path(args.favoritos), Path(args.enviados))
     print(f"{n} lembrete(s) enviado(s).")
     return 0
@@ -238,7 +243,8 @@ def main(argv=None) -> int:
     ex.add_argument("--repo", default="", help="dono/repositorio no GitHub (para os favoritos)")
     ex.add_argument("--avisar", action="store_true", help="manda e-mail com o resumo da coleta")
     lg = sub.add_parser("lembretes-gh", help="(GitHub Actions) envia lembretes a partir do site publicado")
-    lg.add_argument("--lista", required=True)
+    lg.add_argument("--lista")
+    lg.add_argument("--teste", action="store_true", help="só envia um e-mail de teste")
     lg.add_argument("--favoritos", default="favoritos.json")
     lg.add_argument("--enviados", default="lembretes_enviados.json")
     args = ap.parse_args(argv)

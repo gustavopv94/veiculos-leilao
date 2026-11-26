@@ -56,6 +56,28 @@ palavras-chave nos detalhes, no título e na descrição. Confira sempre o edita
   (só precisa do PC ligado): `python -m veiculos_br lembretes --agendar`. Para desligar: `--desagendar`.
 - O horário do leilão vem da última coleta. Rode `coletar` com frequência para pegar remarcações.
 
+### No site online (GitHub Pages)
+
+- Os favoritos ficam em `favoritos.json` do repositório. Sem token, eles ficam salvos **só no navegador**
+  (não se perdem ao reabrir) e o contador mostra "só neste navegador"; os lembretes não são enviados.
+- Configure no 🔔 um token do GitHub (fine-grained, só este repositório) com **Contents: Read and write** e,
+  para o botão "Enviar e-mail de teste", **Actions: Read and write**. Ao salvar o token, o que estava só no
+  navegador é enviado ao GitHub.
+- O workflow `lembretes.yml` roda a cada 15 min e sempre que `favoritos.json` muda. Ao marcar um lembrete chega
+  um **e-mail de confirmação**; o aviso sai na primeira execução depois de "leilão − antecedência". O GitHub às
+  vezes atrasa execuções agendadas: prefira antecedência de 3 h ou mais.
+- E-mail: secrets `EMAIL_USUARIO`, `EMAIL_SENHA` (senha de app) e `EMAIL_PARA` no repositório.
+
+## Calculadora de arrematação
+
+Botão 🧮 no topo ou "Calcular lance máximo" no detalhe do veículo. Busca o valor na tabela FIPE (API pública
+parallelum.com.br) ou aceita digitado, e calcula:
+
+`lance máximo = (FIPE × % máxima − taxas fixas) ÷ (1 + % do leiloeiro)`
+
+Com um lance informado, mostra comissão, custo total, % da FIPE e a folga até o lance máximo. As % e taxas
+ficam lembradas no navegador; no detalhe do veículo dá para salvar o lance máximo na anotação do favorito.
+
 ## Site na internet + coleta semanal
 
 ```

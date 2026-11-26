@@ -2,8 +2,16 @@ name: Lembretes de leilão
 
 on:
   schedule:
-    - cron: "17 * * * *"   # de hora em hora
+    - cron: "*/15 * * * *"   # a cada 15 min (o GitHub costuma atrasar/pular execuções; mais tentativas = menos buracos)
+  push:
+    branches: [main]
+    paths: [favoritos.json]  # lembrete marcado no site: confere na hora e manda o e-mail de confirmação
   workflow_dispatch:
+    inputs:
+      teste:
+        description: "Só enviar um e-mail de teste"
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # grava lembretes_enviados.json (evita mandar o mesmo aviso duas vezes)
@@ -26,8 +34,9 @@ jobs:
       - name: Há algum lembrete marcado?
         id: tem
         run: |
+          if [ "${{ inputs.teste }}" = "true" ]; then echo "sim=1" >> "$GITHUB_OUTPUT"; exit 0; fi
           python3 -c "import json,sys; f=json.load(open('favoritos.json')) if __import__('os').path.exists('favoritos.json') else {}; sys.exit(0 if any(v.get('lembrar') for v in f.values()) else 1)" \
-            && echo "sim=1" >> "$GITHUB_OUTPUT" || echo "sim=0" >> "$GITHUB_OUTPUT"
+            && echo "sim=1" >> "$GITHUB_OUTPUT" || { echo "sim=0" >> "$GITHUB_OUTPUT"; echo "Nenhum favorito com lembrete em favoritos.json."; }
 
       - uses: actions/setup-python@v5
         if: steps.tem.outputs.sim == '1'
@@ -42,11 +51,12 @@ jobs:
           EMAIL_PARA: ${{ secrets.EMAIL_PARA }}
         run: |
           pip install requests beautifulsoup4 lxml
+          if [ "${{ inputs.teste }}" = "true" ]; then python -m veiculos_br lembretes-gh --teste; exit 0; fi
           curl -fsSL "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/dados/lista.json" -o /tmp/lista.json
           python -m veiculos_br lembretes-gh --lista /tmp/lista.json --favoritos favoritos.json --enviados lembretes_enviados.json
 
       - name: Salvar avisos enviados
-        if: steps.tem.outputs.sim == '1'
+        if: steps.tem.outputs.sim == '1' && inputs.teste != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

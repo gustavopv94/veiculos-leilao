@@ -242,14 +242,32 @@ def verificar(caminho_banco=banco.BANCO_PADRAO) -> int:
     return enviados
 
 
+def _rotulo_ant(m: int) -> str:
+    return f"{m} min" if m < 60 else f"{m // 60} h" if m < 1440 else f"{m // 1440} dia{'s' if m >= 2880 else ''}"
+
+
+def _data_ref_do_favorito(f: dict) -> str:
+    """Data ISO salva no favorito (data_ref) ou convertida de data_encerramento 'dd/mm/aaaa hh:mm'."""
+    if f.get("data_ref"):
+        return f["data_ref"]
+    try:
+        return datetime.strptime((f.get("data_encerramento") or "").strip()[:16], "%d/%m/%Y %H:%M").isoformat()
+    except ValueError:
+        return ""
+
+
 def verificar_estatico(lista_json: Path, favoritos_json: Path, enviados_json: Path) -> int:
-    """Versão GitHub Actions: lotes vêm do lista.json publicado e os favoritos do favoritos.json do repositório."""
+    """Versão GitHub Actions: lotes vêm do lista.json publicado e os favoritos do favoritos.json do repositório.
+
+    Manda um e-mail de confirmação quando um lembrete novo aparece e o aviso quando chega a hora
+    (na primeira execução depois de `leilão - antecedência`, até o horário do leilão)."""
     from datetime import timedelta
     try:
         favs = json.loads(Path(favoritos_json).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         favs = {}
     if not any(f.get("lembrar") for f in favs.values()):
+        print("Nenhum favorito com lembrete.")
         return 0
     lst = json.loads(Path(lista_json).read_text(encoding="utf-8"))
     lotes = {r[0]: dict(zip(lst["cols"], r)) for r in lst["rows"]}
@@ -258,22 +276,59 @@ def verificar_estatico(lista_json: Path, favoritos_json: Path, enviados_json: Pa
     except (OSError, ValueError):
         enviados = {}
     cfg, agora, n = carregar_config(), datetime.now(), 0
+    if not email_configurado(cfg):
+        print("AVISO: e-mail não configurado (secrets EMAIL_USUARIO / EMAIL_SENHA / EMAIL_PARA).")
     for id_, f in favs.items():
-        l = lotes.get(id_)
-        if not f.get("lembrar") or not l or not l.get("data_ref"):
+        if not f.get("lembrar"):
             continue
-        chave_env = f"{id_}|{l['data_ref']}|{f.get('antecedencia_min', 60)}"
-        quando = datetime.fromisoformat(l["data_ref"])
-        if chave_env in enviados or not (quando > agora >= quando - timedelta(minutes=int(f.get("antecedencia_min") or 60))):
+        l = lotes.get(id_) or {}
+        item = {"titulo": f.get("titulo") or id_, "link": f.get("link", ""), "preco_ref": f.get("preco_ref"),
+                "cidade": f.get("cidade"), "uf": f.get("uf"), "condicao": f.get("condicao") or "Não informado",
+                "fonte": f.get("fonte", ""), "data_encerramento": f.get("data_encerramento", ""),
+                "data_ref": _data_ref_do_favorito(f)}
+        item.update({k: v for k, v in l.items() if v not in (None, "")})  # dados da última coleta têm prioridade
+        item["nota"] = f.get("nota", "")
+        ant = int(f.get("antecedencia_min") or 60)
+        if not item.get("data_ref"):
+            print(f"- {item['titulo'][:60]}: sem data de leilão ainda")
             continue
-        titulo, texto = mensagem({**l, "nota": f.get("nota", ""), "antecedencia_min": f.get("antecedencia_min")})
-        if enviar(titulo, texto, cfg):
-            enviados[chave_env] = agora.isoformat(timespec="seconds")
-            n += 1
+        quando = datetime.fromisoformat(item["data_ref"])
+        if quando <= agora:
+            print(f"- {item['titulo'][:60]}: leilão já passou ({item['data_ref']})")
+            continue
+        chave = f"{id_}|{item['data_ref']}|{ant}"
+        if quando - timedelta(minutes=ant) <= agora:
+            if chave in enviados:
+                print(f"- {item['titulo'][:60]}: aviso já enviado")
+                continue
+            titulo, texto = mensagem(item)
+            if enviar(titulo, texto, cfg):
+                enviados[chave] = agora.isoformat(timespec="seconds")
+                n += 1
+                print(f"- {item['titulo'][:60]}: AVISO ENVIADO")
+            else:
+                print(f"- {item['titulo'][:60]}: falha ao enviar o aviso")
+        elif chave + "|conf" not in enviados:
+            titulo = f"✔ Lembrete marcado: {item['titulo'][:70]}"
+            texto = (f"Você vai receber um aviso {_rotulo_ant(ant)} antes do leilão "
+                     "(o GitHub pode atrasar alguns minutos).\n\n" + mensagem(item)[1])
+            if enviar(titulo, texto, cfg):
+                enviados[chave + "|conf"] = agora.isoformat(timespec="seconds")
+                print(f"- {item['titulo'][:60]}: confirmação enviada (aviso em {quando - timedelta(minutes=ant)})")
+        else:
+            print(f"- {item['titulo'][:60]}: aguardando (aviso em {quando - timedelta(minutes=ant)})")
     limite = (agora - timedelta(days=60)).isoformat()
     enviados = {k: v for k, v in enviados.items() if v >= limite}
     Path(enviados_json).write_text(json.dumps(enviados, indent=1), encoding="utf-8")
     return n
+
+
+def enviar_teste_estatico() -> None:
+    cfg = carregar_config()
+    if not email_configurado(cfg):
+        raise SystemExit("E-mail não configurado: crie os secrets EMAIL_USUARIO, EMAIL_SENHA e EMAIL_PARA no repositório.")
+    testar_email(cfg)
+    print(f"E-mail de teste enviado para {cfg['email']['para']}.")
 
 
 # --------------------------------------------------------------------------------------

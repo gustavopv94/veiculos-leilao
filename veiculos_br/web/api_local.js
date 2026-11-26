@@ -33,42 +33,74 @@ const carregar = (async () => {
 })();
 
 // ------------------------------------------------------------------ favoritos (GitHub)
+// Toda alteração entra primeiro na fila "favs_pend" ({id: dados | null}, null = removido). A fila só é limpa
+// depois que o GitHub aceita a gravação; ao abrir o site, o arquivo remoto é mesclado COM a fila por cima —
+// assim nada salvo neste navegador se perde (antes o arquivo remoto antigo sobrescrevia tudo).
+const lerLS = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch (e) { return def; } };
 const Favs = {
   dados: {}, sha: null,
   token() { return localStorage.getItem("gh_token") || ""; },
   repo() { return window.REPO || (META && META.repo) || ""; },
-  async carregar() {
-    const cache = localStorage.getItem("favs_cache");
-    if (cache) this.dados = JSON.parse(cache);
+  pendentes() { return lerLS("favs_pend", {}); },
+  temPendentes() { return Object.keys(this.pendentes()).length > 0; },
+  alterar(id, valor) {  // valor = dados do favorito, ou null para remover
+    if (valor) this.dados[id] = valor; else delete this.dados[id];
+    const p = this.pendentes(); p[id] = valor || null;
+    localStorage.setItem("favs_pend", JSON.stringify(p));
+    localStorage.setItem("favs_cache", JSON.stringify(this.dados));
+  },
+  aplicarPendentes(base) {
+    const out = { ...base };
+    for (const [id, v] of Object.entries(this.pendentes())) { if (v) out[id] = v; else delete out[id]; }
+    return out;
+  },
+  async lerRemoto() {  // devolve {dados, sha} ou null
     const repo = this.repo();
-    if (!repo) return;
+    if (!repo) return null;
+    const h = { Accept: "application/vnd.github+json" };
+    if (this.token()) h.Authorization = "Bearer " + this.token();
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/favoritos.json?t=${Date.now()}`, { headers: h, cache: "no-store" });
+    if (r.status === 404) return { dados: {}, sha: null };
+    if (!r.ok) return null;
+    const j = await r.json();
+    return { dados: JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, ""))))) || {}, sha: j.sha };
+  },
+  async carregar() {
+    this.dados = lerLS("favs_cache", {});
     try {
-      const h = { Accept: "application/vnd.github+json" };
-      if (this.token()) h.Authorization = "Bearer " + this.token();
-      const r = await fetch(`https://api.github.com/repos/${repo}/contents/favoritos.json?t=${Date.now()}`, { headers: h, cache: "no-store" });
-      if (r.ok) {
-        const j = await r.json();
-        this.sha = j.sha;
-        this.dados = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, ""))))) || {};
+      const rem = await this.lerRemoto();
+      if (rem) {
+        this.sha = rem.sha;
+        this.dados = this.aplicarPendentes(rem.dados);
         localStorage.setItem("favs_cache", JSON.stringify(this.dados));
       }
     } catch (e) { /* offline: usa o cache */ }
+    if (this.token() && this.temPendentes()) await this.gravar("sincroniza favoritos").catch(() => {});
   },
   async gravar(msg) {
     localStorage.setItem("favs_cache", JSON.stringify(this.dados));
     const repo = this.repo(), tok = this.token();
     if (!repo || !tok) return { ok: false, motivo: "sem_token" };
     const url = `https://api.github.com/repos/${repo}/contents/favoritos.json`;
+    const enviadas = this.pendentes();
     const corpo = () => JSON.stringify({ message: msg, sha: this.sha || undefined,
       content: btoa(unescape(encodeURIComponent(JSON.stringify(this.dados, null, 1)))) });
     const h = { Accept: "application/vnd.github+json", Authorization: "Bearer " + tok, "Content-Type": "application/json" };
-    let r = await fetch(url, { method: "PUT", headers: h, body: corpo() });
-    if (r.status === 409 || r.status === 422) {  // sha desatualizado: pega o atual e tenta de novo
-      const local = this.dados; await this.carregar(); this.dados = { ...this.dados, ...local };
-      r = await fetch(url, { method: "PUT", headers: h, body: corpo() });
-    }
-    if (!r.ok) return { ok: false, motivo: `GitHub respondeu ${r.status}` };
-    this.sha = (await r.json()).content.sha;
+    try {
+      let r = await fetch(url, { method: "PUT", headers: h, body: corpo() });
+      if (r.status === 409 || r.status === 422) {  // sha desatualizado: pega o atual, reaplica a fila e tenta de novo
+        const rem = await this.lerRemoto();
+        if (rem) { this.sha = rem.sha; this.dados = this.aplicarPendentes(rem.dados); }
+        r = await fetch(url, { method: "PUT", headers: h, body: corpo() });
+      }
+      if (!r.ok) return { ok: false, motivo: `GitHub respondeu ${r.status}${r.status === 401 || r.status === 403 ? " (token inválido ou sem permissão)" : ""}` };
+      this.sha = (await r.json()).content.sha;
+    } catch (e) { return { ok: false, motivo: "sem conexão com o GitHub" }; }
+    // limpa da fila só o que foi enviado (e não mudou no meio do caminho)
+    const p = this.pendentes();
+    for (const id of Object.keys(enviadas)) if (JSON.stringify(p[id]) === JSON.stringify(enviadas[id])) delete p[id];
+    localStorage.setItem("favs_pend", JSON.stringify(p));
+    localStorage.setItem("favs_cache", JSON.stringify(this.dados));
     return { ok: true };
   },
 };
@@ -81,7 +113,7 @@ function marcar(o) {
 function favoritosComoLotes() {  // favoritos que saíram das fontes continuam visíveis
   return Object.entries(Favs.dados).filter(([id]) => !POR_ID.has(id)).map(([id, f]) => ({
     id, ativo: 0, titulo: f.titulo || id, link: f.link || "", foto: f.foto || "", fonte: f.fonte || "", condicao: f.condicao || "Não informado",
-    uf: f.uf || "", cidade: f.cidade || "", preco_ref: f.preco_ref ?? null, data_ref: "", data_encerramento: f.data_encerramento || "",
+    uf: f.uf || "", cidade: f.cidade || "", preco_ref: f.preco_ref ?? null, data_ref: f.data_ref || "", data_encerramento: f.data_encerramento || "",
     _q: norm(f.titulo) }));
 }
 
@@ -182,22 +214,24 @@ window.fetch = async (input, init = {}) => {
   if (rota.startsWith("/api/favoritos/")) {
     const id = decodeURIComponent(rota.slice(15));
     if (metodo === "DELETE") {
-      delete Favs.dados[id];
+      Favs.alterar(id, null);
       const r = await Favs.gravar("remove favorito");
       return json({ ok: true, ...r });
     }
     const dados = init.body ? JSON.parse(init.body) : {};
     const o = POR_ID.get(id) || {}, antigo = Favs.dados[id] || {};
-    Favs.dados[id] = { criado_em: antigo.criado_em || new Date().toISOString().slice(0, 19), lembrar: !!dados.lembrar,
+    Favs.alterar(id, { criado_em: antigo.criado_em || new Date().toISOString().slice(0, 19), lembrar: !!dados.lembrar,
       antecedencia_min: Math.max(60, +dados.antecedencia_min || 60), nota: String(dados.nota || "").slice(0, 500),
       titulo: o.titulo || antigo.titulo, link: o.link || antigo.link, foto: o.foto || antigo.foto, fonte: o.fonte || antigo.fonte,
       condicao: o.condicao || antigo.condicao, uf: o.uf || antigo.uf, cidade: o.cidade || antigo.cidade,
-      preco_ref: o.preco_ref ?? antigo.preco_ref ?? null, data_encerramento: o.data_encerramento || antigo.data_encerramento || "" };
+      preco_ref: o.preco_ref ?? antigo.preco_ref ?? null, data_encerramento: o.data_encerramento || antigo.data_encerramento || "",
+      data_ref: o.data_ref || antigo.data_ref || "" });
     const r = await Favs.gravar("atualiza favorito");
     return json({ id, ...Favs.dados[id], ...r });
   }
   if (rota === "/api/lembretes/config") {
-    return json({ estatico: true, token: !!Favs.token(), repo: Favs.repo(), algum_celular: !!Favs.token() });
+    return json({ estatico: true, token: !!Favs.token(), repo: Favs.repo(), algum_celular: !!Favs.token(),
+      pendentes: Favs.temPendentes() });
   }
   return json({ detail: "não disponível na versão online" }, 404);
 };
