@@ -46,5 +46,21 @@
   "preco_ref": 1500,
   "data_encerramento": "30/11/2026 09:44",
   "data_ref": "2026-11-30T09:44:00"
+ },
+ "copart:1198664": {
+  "criado_em": "2026-11-27T21:22:51",
+  "lembrar": false,
+  "antecedencia_min": 60,
+  "nota": "",
+  "titulo": "FORD FIESTA 1.6 16V SIGMA 2014/2015",
+  "link": "https://www.copart.com.br/lot/1198664",
+  "foto": "https://brimages.copart.com.br/Repository/Fotos/ff3e09da-936b-48b6-8225-993b8f218a45?imageType=full",
+  "fonte": "Copart",
+  "condicao": "Conservado",
+  "uf": "SP",
+  "cidade": "Osasco",
+  "preco_ref": 21450,
+  "data_encerramento": "30/11/2026 17:00",
+  "data_ref": "2026-11-30T17:00:00"
  }
 }
