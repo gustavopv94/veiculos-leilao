@@ -108,5 +108,21 @@
   "preco_ref": 12600,
   "data_encerramento": "30/11/2026 14:00",
   "data_ref": "2026-11-30T14:00:00"
+ },
+ "sodre:2830660": {
+  "criado_em": "2026-11-27T18:59:25",
+  "lembrar": false,
+  "antecedencia_min": 60,
+  "nota": "",
+  "titulo": "RENAULT - KWID ZEN 2 2023/2024",
+  "link": "https://leilao.sodresantoro.com.br/leilao/29249/lote/2830660/",
+  "foto": "https://photos.sodresantoro.com.br/veiculos/29249/2830660/1790091391_C1671305A.JPG",
+  "fonte": "Sodré Santoro",
+  "condicao": "Pequena monta",
+  "uf": "SP",
+  "cidade": "Guarulhos I",
+  "preco_ref": 1500,
+  "data_encerramento": "30/11/2026 09:44",
+  "data_ref": "2026-11-30T09:44:00"
  }
 }
