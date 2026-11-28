@@ -46,21 +46,5 @@
   "preco_ref": 21450,
   "data_encerramento": "30/11/2026 17:00",
   "data_ref": "2026-11-30T17:00:00"
- },
- "copart:1183689": {
-  "criado_em": "2026-11-27T21:24:40",
-  "lembrar": false,
-  "antecedencia_min": 60,
-  "nota": "",
-  "titulo": "FORD FIESTA SEDAN 1.6 16V TI-VCT 2015/2016",
-  "link": "https://www.copart.com.br/lot/1183689",
-  "foto": "https://brimages.copart.com.br/Repository/Fotos/a52df695-2a00-4dd4-9336-c3c53ee0764e?imageType=full",
-  "fonte": "Copart",
-  "condicao": "Pequena monta",
-  "uf": "GO",
-  "cidade": "Goiânia",
-  "preco_ref": 15100,
-  "data_encerramento": "30/11/2026 15:00",
-  "data_ref": "2026-11-30T15:00:00"
  }
 }
